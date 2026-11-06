@@ -921,6 +921,99 @@ async def bulk_recover_leads(
     return {"recovered": len(recovered_ids), "errors": errors, "recovered_ids": recovered_ids}
 
 
+@router.post("/import")
+async def import_leads_file(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Import new leads from a CSV or Excel file. All columns are supported.
+
+    Required column: email
+    Optional columns: name, plus any custom field (stored in lead.custom_data)
+    """
+    from app.file_import import parse_import_file
+    from app.app_settings import EMAIL_VERIFICATION_ENABLED, get_setting
+
+    raw = await file.read()
+    try:
+        headers, rows_all = parse_import_file(raw, file.filename or "upload.csv")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+    if not rows_all:
+        raise HTTPException(400, "File is empty or has no data rows")
+
+    if not any(h.lower() == "email" for h in headers):
+        raise HTTPException(400, "File must have an 'email' column")
+
+    # Identify column name mappings (case-insensitive)
+    email_col = next(h for h in headers if h.lower() == "email")
+    name_col = next((h for h in headers if h.lower() == "name"), None)
+    reserved_lower = {"email", "name", "status", "interest", "email_verification_status"}
+    custom_cols = [h for h in headers if h.lower() not in reserved_lower and h]
+
+    created = 0
+    updated = 0
+    errors = 0
+    skipped = 0
+    seen: set[str] = set()
+
+    for row in rows_all:
+        email = row.get(email_col, "").strip().lower()
+        if not email or "@" not in email:
+            skipped += 1
+            continue
+        if email in seen:
+            skipped += 1
+            continue
+        seen.add(email)
+
+        name = row.get(name_col, "").strip() if name_col else ""
+        custom_data = {h: row[h] for h in custom_cols if row.get(h, "").strip()}
+
+        try:
+            result = await db.execute(select(Lead).where(Lead.email == email))
+            lead = result.scalar_one_or_none()
+            if not lead:
+                lead = Lead(email=email, name=name, custom_data=custom_data or {})
+                db.add(lead)
+                await db.flush()
+                created += 1
+            else:
+                changed = False
+                if name and not lead.name:
+                    lead.name = name
+                    changed = True
+                if custom_data:
+                    merged = {**(lead.custom_data or {}), **custom_data}
+                    if merged != (lead.custom_data or {}):
+                        lead.custom_data = merged
+                        changed = True
+                if changed:
+                    await db.flush()
+                updated += 1
+        except Exception:
+            log.exception("import_leads: failed for email=%s", email)
+            await db.rollback()
+            errors += 1
+            continue
+
+    await db.commit()
+
+    from app.routers.schedule import enqueue_global_recalculate
+    enqueue_global_recalculate(background_tasks)
+
+    return {
+        "created": created,
+        "updated": updated,
+        "skipped": skipped,
+        "errors": errors,
+        "total_rows": len(rows_all),
+        "columns_detected": headers,
+    }
+
+
 @router.post("/recover-import")
 async def import_recover_csv(
     background_tasks: BackgroundTasks,
@@ -928,43 +1021,45 @@ async def import_recover_csv(
     verify_emails: bool = Query(True),
     db: AsyncSession = Depends(get_db),
 ):
-    """CSV with id + email columns (and optional extra columns). Uses same recovery rules as bulk-recover."""
+    """CSV or Excel with id + email columns (and optional extra columns). Uses same recovery rules as bulk-recover."""
+    from app.file_import import parse_import_file
+
     raw = await file.read()
-    text = raw.decode("utf-8-sig")
-    reader = csv.reader(io.StringIO(text))
-    rows = list(reader)
-    if not rows:
-        raise HTTPException(400, "Empty CSV")
+    try:
+        headers, rows_all = parse_import_file(raw, file.filename or "upload.csv")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
 
-    header = [h.strip().lower() for h in rows[0]]
-    id_idx = None
-    email_idx = None
-    if "id" in header or "lead_id" in header:
-        try:
-            id_idx = header.index("id") if "id" in header else header.index("lead_id")
-        except ValueError:
-            id_idx = None
-        try:
-            email_idx = header.index("email")
-        except ValueError:
-            email_idx = None
-        data_rows = rows[1:]
-    else:
-        id_idx, email_idx = 0, 1
-        data_rows = rows
+    if not rows_all:
+        raise HTTPException(400, "File is empty or has no data rows")
 
-    if id_idx is None or email_idx is None:
-        raise HTTPException(400, "CSV must include id and email columns (header row or first two columns)")
+    header_lower = [h.lower() for h in headers]
+
+    # Determine id and email column names
+    id_col: str | None = None
+    email_col: str | None = None
+    for h in headers:
+        hl = h.lower()
+        if hl in ("id", "lead_id") and id_col is None:
+            id_col = h
+        if hl == "email" and email_col is None:
+            email_col = h
+
+    # Fallback: treat first col as id, second as email
+    if (id_col is None or email_col is None) and len(headers) >= 2:
+        id_col = headers[0]
+        email_col = headers[1]
+
+    if id_col is None or email_col is None:
+        raise HTTPException(400, "File must include id and email columns")
 
     items: list[LeadBulkRecoverItem] = []
-    for parts in data_rows:
-        if len(parts) <= max(id_idx, email_idx):
-            continue
+    for row in rows_all:
         try:
-            lid = int(str(parts[id_idx]).strip())
-        except ValueError:
+            lid = int(str(row.get(id_col, "")).strip())
+        except (ValueError, TypeError):
             continue
-        em = str(parts[email_idx]).strip().strip('"')
+        em = str(row.get(email_col, "")).strip().strip('"')
         if lid and em:
             items.append(LeadBulkRecoverItem(lead_id=lid, email=em))
 

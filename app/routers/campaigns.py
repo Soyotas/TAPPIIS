@@ -3020,24 +3020,25 @@ async def import_campaign_leads(
     )
     has_personalized_import = (pers_check_import.scalar() or 0) > 0
 
+    from app.file_import import parse_import_file
     contents = await file.read()
-    text = contents.decode("utf-8-sig")  # handle BOM from Excel
-
-    # Try to detect delimiter
-    sniffer = csv.Sniffer()
     try:
-        dialect = sniffer.sniff(text[:2048])
-    except csv.Error:
-        dialect = csv.excel  # fallback
+        raw_headers, _rows_all = parse_import_file(contents, file.filename or "upload.csv")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
 
-    reader = csv.DictReader(io.StringIO(text), dialect=dialect)
-
-    if not reader.fieldnames:
-        raise HTTPException(400, "CSV file appears to be empty or has no headers")
-
-    raw_headers = [(f or "").strip() for f in reader.fieldnames]
     if not any(h.lower() == "email" for h in raw_headers if h):
-        raise HTTPException(400, "CSV must have an 'email' column")
+        raise HTTPException(400, "File must have an 'email' column")
+
+    # Rebuild as a CSV DictReader so the rest of the function keeps working.
+    import csv as _csv_mod
+    _csv_buf = io.StringIO()
+    _dw = _csv_mod.DictWriter(_csv_buf, fieldnames=raw_headers, extrasaction="ignore")
+    _dw.writeheader()
+    _dw.writerows(_rows_all)
+    _csv_buf.seek(0)
+    reader = _csv_mod.DictReader(_csv_buf)
+    _ = reader.fieldnames  # prime
 
     if confirm_only:
         from collections import defaultdict

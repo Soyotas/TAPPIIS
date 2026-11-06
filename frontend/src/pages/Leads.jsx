@@ -390,7 +390,7 @@ export default function Leads() {
 
   const importRecoverCsv = async (file) => {
     const ok = await confirm(
-      'Recover leads from this CSV? The server reads id and email columns (header row or first two columns).',
+      'Recover leads from this file? Reads id and email columns (all column names are auto-detected).',
     );
     if (!ok) return;
     loading.start();
@@ -404,8 +404,29 @@ export default function Leads() {
       });
       await loadLeads(1, true);
     } catch (e) {
-      notify({ type: 'error', message: e.message || 'Import failed — check CSV format and IDs.' });
+      notify({ type: 'error', message: e.message || 'Import failed — check file format and IDs.' });
       await loadLeads(1, true);
+    } finally {
+      loading.stop();
+    }
+  };
+
+  const importNewLeads = async (file) => {
+    const ok = await confirm(
+      `Import leads from "${file.name}"?\n\nAll columns are imported automatically — email is required, all other columns (name, company, phone, etc.) are stored as custom fields.`,
+    );
+    if (!ok) return;
+    loading.start();
+    try {
+      const res = await api.upload('/leads/import', file);
+      const cols = res.columns_detected?.join(', ') || '';
+      notify({
+        type: 'success',
+        message: `Imported: ${res.created ?? 0} new, ${res.updated ?? 0} updated, ${res.skipped ?? 0} skipped.${cols ? ' Columns: ' + cols : ''}`,
+      });
+      await loadLeads(1, true);
+    } catch (e) {
+      notify({ type: 'error', message: e.message || 'Import failed — check file format.' });
     } finally {
       loading.stop();
     }
@@ -428,14 +449,25 @@ export default function Leads() {
           </Button>
           <FileUploadArea
             size="sm"
-            accept=".csv,text/csv"
+            accept=".csv,.xlsx,.xls,.xlsm,.tsv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (f) importNewLeads(f);
+            }}
+          >
+            Import leads (CSV / Excel)
+          </FileUploadArea>
+          <FileUploadArea
+            size="sm"
+            accept=".csv,.xlsx,.xls,.xlsm,.tsv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
             onChange={(e) => {
               const f = e.target.files?.[0];
               e.target.value = '';
               if (f) importRecoverCsv(f);
             }}
           >
-            Import recovery CSV
+            Recovery import (id + email)
           </FileUploadArea>
         </div>
       </div>
