@@ -1,0 +1,9 @@
+.venv
+app
+tests
+smoke_test
+scripts
+requirements.txt
+Dockerfile
+docker-compose*.yml
+Caddyfile*
