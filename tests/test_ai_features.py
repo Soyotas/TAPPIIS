@@ -9,6 +9,23 @@ def _add_setting(session, key, value):
     session.add(AppSetting(key=key, value=value))
 
 
+def test_supported_ai_providers_match_lightweight_dependencies():
+    assert ai_classifier.get_supported_providers() == [
+        {"value": "openai", "label": "OpenAI"},
+        {"value": "anthropic", "label": "Anthropic"},
+    ]
+
+
+def test_app_oauth_only_exposes_google_login():
+    from app.routers.app_oauth import router
+
+    paths = {route.path for route in router.routes}
+    assert "/oauth/app/google/authorize" in paths
+    assert "/oauth/app/google/callback" in paths
+    assert "/oauth/app/microsoft/authorize" not in paths
+    assert "/oauth/app/microsoft/callback" not in paths
+
+
 @pytest.mark.asyncio
 async def test_temperature_flag_and_retry(session, monkeypatch):
     # configure reply_classifier feature

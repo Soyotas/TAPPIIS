@@ -128,42 +128,6 @@ def _google_userinfo(access_token: str) -> dict | None:
         return None
 
 
-def _microsoft_exchange_code(code: str, client_id: str, client_secret: str, tenant_id: str) -> dict | None:
-    authority = f"{MICROSOFT_AUTHORITY_BASE}/{tenant_id or 'common'}"
-    token_url = f"{authority}/oauth2/v2.0/token"
-    data = urllib.parse.urlencode({
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "code": code,
-        "redirect_uri": settings.app_microsoft_redirect_uri,
-        "grant_type": "authorization_code",
-        "scope": APP_MICROSOFT_SCOPES,
-    }).encode()
-    req = urllib.request.Request(
-        token_url, data=data,
-        headers={"Content-Type": "application/x-www-form-urlencoded"}, method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            return json.loads(resp.read().decode())
-    except Exception as e:
-        log.error("Microsoft app-login token exchange error: %s", e)
-        return None
-
-
-def _microsoft_userinfo(access_token: str) -> dict | None:
-    req = urllib.request.Request(
-        f"{MICROSOFT_GRAPH_BASE}/me",
-        headers={"Authorization": f"Bearer {access_token}"},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            return json.loads(resp.read().decode())
-    except Exception as e:
-        log.error("Microsoft app-login /me error: %s", e)
-        return None
-
-
 # ---------------------------------------------------------------------------
 # Shared user resolution + session creation
 # ---------------------------------------------------------------------------
