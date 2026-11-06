@@ -438,9 +438,11 @@ async def dispatch_notification(
                 f"View in Quickly: {_deep_link('/notifications')}\n"
             )
             if info.get("lead_id"):
-                body += f"View lead: {_deep_link(f'/leads/{info['lead_id']}')}\n"
-            if info.get("campaign_id"):
-                body += f"View campaign: {_deep_link(f'/campaigns/{info['campaign_id']}')}\n"
+                lead_id = info['lead_id']
+                body += f"View lead: {_deep_link(f'/leads/{lead_id}')}\n"
+            if info.get('campaign_id'):
+                campaign_id = info['campaign_id']
+                body += f"View campaign: {_deep_link(f'/campaigns/{campaign_id}')}\n"
 
             success = await _send_notification_for_user(
                 db, user, config, info["title"], body

@@ -278,11 +278,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Serve compiled frontend assets.  Mounted at /assets so API routes are never
 # shadowed.  The SPA entrypoint and catch-all are handled by explicit routes
 # below so that /api/* is always matched by the routers first.
-app.mount(
-    "/assets",
-    StaticFiles(directory=str(BASE_DIR / "frontend" / "dist" / "assets")),
-    name="assets",
-)
+dist_assets = BASE_DIR / "frontend" / "dist" / "assets"
+if dist_assets.exists():
+    app.mount(
+        "/assets",
+        StaticFiles(directory=str(dist_assets)),
+        name="assets",
+    )
 
 if (BASE_DIR / "static").exists():
     app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
