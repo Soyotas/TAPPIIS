@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "https://tappis.vercel.app/api/:path*"
+    },
+    {
+      "source": "/oauth/:path*",
+      "destination": "https://tappis.vercel.app/oauth/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
