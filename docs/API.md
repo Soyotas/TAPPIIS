@@ -40,7 +40,7 @@ The tracking endpoints (`/o/`, `/c/`, `/u/`) are **public** (no auth) — they a
 - [Webhooks](#webhooks)
 - [Gmail OAuth](#gmail-oauth)
 - [Microsoft / Office 365 OAuth](#microsoft--office-365-oauth)
-- [App OAuth (Login with Google/Microsoft)](#app-oauth-login-with-googlemicrosoft)
+- [App OAuth (Login with Google)](#app-oauth-login-with-google)
 - [Unibox](#unibox)
 - [Notifications](#notifications)
 - [Tracking](#tracking)
@@ -1203,9 +1203,9 @@ Disconnect an Office 365 account. Removes stored tokens and reverts the inbox pr
 
 ---
 
-## App OAuth (Login with Google/Microsoft)
+## App OAuth (Login with Google)
 
-These endpoints allow users to log in to Quickly itself using their Google or Microsoft account instead of a username/password. They are separate from the inbox-connection OAuth flows.
+These endpoints allow users to log in to Quickly itself using their Google account instead of a username/password. They are separate from the inbox-connection OAuth flows.
 
 ### `GET /oauth/app/google/authorize`
 
@@ -1214,14 +1214,6 @@ Start the app-level Google login flow. Redirects to Google's consent screen. On 
 ### `GET /oauth/app/google/callback`
 
 OAuth callback for app-level Google login.
-
-### `GET /oauth/app/microsoft/authorize`
-
-Start the app-level Microsoft login flow.
-
-### `GET /oauth/app/microsoft/callback`
-
-OAuth callback for app-level Microsoft login.
 
 ---
 

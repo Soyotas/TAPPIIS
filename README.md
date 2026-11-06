@@ -83,7 +83,7 @@ If this saves you money, please consider dropping a ⭐ — it helps others find
 ### Inbox & Replies
 
 * **Unified inbox (Unibox)** — Real-time reply detection across all connected Gmail and Microsoft 365 accounts, with threaded view and compose/reply
-* **AI reply classification** — Automatically classifies every reply as `interested`, `not_interested`, `out_of_office`, `wrong_person`, `auto_reply`, or `unsubscribed`. Supports 19 AI providers including **Ollama** for fully offline, on-premise classification
+* **AI reply classification** — Automatically classifies every reply as `interested`, `not_interested`, `out_of_office`, `wrong_person`, `auto_reply`, or `unsubscribed`. Supports OpenAI and Anthropic.
 * **Lead provider matching** — DNS lookup routes sends through inboxes that match the lead's email provider
 
 ### Tracking & Analytics
@@ -264,7 +264,7 @@ Yes. Quickly connects to Gmail via Google OAuth, to Microsoft 365, Office 365, a
 Yes. You can deploy on Railway and use the generated subdomain, or run Quickly over plain HTTP without `CADDY_HOST` set.
 
 **Does AI reply classification require an OpenAI key?**
-No. Quickly supports 19 AI providers including Anthropic, Google Gemini, Mistral, Groq, Cohere, and Ollama — which lets you run classification fully locally with no external API calls.
+No. Quickly supports OpenAI and Anthropic for AI reply classification.
 
 ---
 

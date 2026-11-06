@@ -20,7 +20,7 @@ from __future__ import annotations
 import logging
 from typing import Literal
 
-from any_llm import LLMProvider, acompletion, alist_models
+from any_llm import acompletion, alist_models
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -49,49 +49,14 @@ FEATURES: dict[str, dict] = {
 # ── Provider helpers ──────────────────────────────────────────────────────────
 
 def get_supported_providers() -> list[dict[str, str]]:
-    """Return a list of all supported AI providers, most popular first.
+    """Return providers installed in the lightweight deployment profile.
 
     Each entry is ``{"value": "<enum_value>", "label": "<display_name>"}``.
-    Popular providers are pinned to the top; the rest follow alphabetically.
     """
-    _LABELS: dict[str, str] = {
-        "openai": "OpenAI",
-        "anthropic": "Anthropic",
-        "gemini": "Google (Gemini)",
-        "mistral": "Mistral",
-        "groq": "Groq",
-        "cohere": "Cohere",
-        "together": "Together AI",
-        "deepseek": "DeepSeek",
-        "openrouter": "OpenRouter",
-        "perplexity": "Perplexity",
-        "xai": "xAI (Grok)",
-        "ollama": "Ollama (Local)",
-        "bedrock": "AWS Bedrock",
-        "azure": "Azure OpenAI",
-        "fireworks": "Fireworks AI",
-        "sambanova": "SambaNova",
-        "cerebras": "Cerebras",
-        "huggingface": "Hugging Face",
-        "vertexai": "Vertex AI",
-    }
-    _TOP = [
-        "openai", "anthropic", "gemini", "mistral", "groq", "cohere",
-        "together", "deepseek", "openrouter", "perplexity", "xai",
+    return [
+        {"value": "openai", "label": "OpenAI"},
+        {"value": "anthropic", "label": "Anthropic"},
     ]
-
-    all_values = {p.value for p in LLMProvider}
-    result: list[dict[str, str]] = []
-
-    for v in _TOP:
-        if v in all_values:
-            result.append({"value": v, "label": _LABELS.get(v, v.title())})
-
-    remaining = sorted(all_values - {p["value"] for p in result})
-    for v in remaining:
-        result.append({"value": v, "label": _LABELS.get(v, v.title())})
-
-    return result
 
 
 async def get_models_for_provider(provider: str, api_key: str) -> list[dict[str, str]]:

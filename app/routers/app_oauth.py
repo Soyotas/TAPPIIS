@@ -1,4 +1,4 @@
-"""App-level OAuth login/signup routes (Google + Microsoft).
+"""App-level OAuth login/signup routes (Google).
 
 These endpoints handle authentication for the *application itself* — they
 are completely separate from the inbox-connection OAuth flows in
@@ -45,11 +45,6 @@ APP_GOOGLE_SCOPES = (
     "https://www.googleapis.com/auth/gmail.send "
     "https://www.googleapis.com/auth/userinfo.email"
 )
-
-# Microsoft endpoints & scopes (app login — NOT inbox connection)
-MICROSOFT_AUTHORITY_BASE = "https://login.microsoftonline.com"
-MICROSOFT_GRAPH_BASE = "https://graph.microsoft.com/v1.0"
-APP_MICROSOFT_SCOPES = "openid email profile User.Read Mail.Send offline_access"
 
 STATE_TTL_MINUTES = 10
 
@@ -335,91 +330,3 @@ async def app_google_callback(
 
     return redirect
 
-
-# ---------------------------------------------------------------------------
-# Microsoft OAuth — app login
-# ---------------------------------------------------------------------------
-
-@router.get("/oauth/app/microsoft/authorize")
-async def app_microsoft_authorize(db: AsyncSession = Depends(get_db)):
-    """Redirect user to Microsoft consent screen for app login."""
-    from app.app_settings import get_office365_oauth_credentials
-    client_id, _, tenant_id = await get_office365_oauth_credentials(db)
-    if not client_id:
-        raise HTTPException(400, "Microsoft OAuth not configured")
-
-    state_token = await _create_state(db, "app_login")
-
-    authority = f"{MICROSOFT_AUTHORITY_BASE}/{tenant_id or 'common'}"
-    params = {
-        "client_id": client_id,
-        "redirect_uri": settings.app_microsoft_redirect_uri,
-        "response_type": "code",
-        "scope": APP_MICROSOFT_SCOPES,
-        "response_mode": "query",
-        "state": state_token,
-        "prompt": "consent",
-    }
-    url = f"{authority}/oauth2/v2.0/authorize?{urllib.parse.urlencode(params)}"
-    return RedirectResponse(url)
-
-
-@router.get("/oauth/app/microsoft/callback")
-async def app_microsoft_callback(
-    request: Request,
-    code: str = "",
-    error: str = "",
-    error_description: str = "",
-    state: str = "",
-    db: AsyncSession = Depends(get_db),
-):
-    """Handle Microsoft OAuth callback for app login."""
-    if error:
-        raise HTTPException(400, f"Microsoft OAuth error: {error} — {error_description}")
-    if not code or not state:
-        raise HTTPException(400, "Missing authorization code or state")
-
-    await _validate_state(db, state, "app_login")
-
-    from app.app_settings import get_office365_oauth_credentials
-    client_id, client_secret, tenant_id = await get_office365_oauth_credentials(db)
-
-    token_data = _microsoft_exchange_code(code, client_id, client_secret, tenant_id)
-    if not token_data:
-        raise HTTPException(502, "Failed to exchange Microsoft authorization code")
-
-    access_token = token_data.get("access_token", "")
-    refresh_token = token_data.get("refresh_token", "")
-    expires_in = token_data.get("expires_in", 3600)
-
-    if not refresh_token:
-        raise HTTPException(400, "No refresh token received. Ensure offline_access scope is requested.")
-
-    userinfo = _microsoft_userinfo(access_token)
-    if not userinfo:
-        raise HTTPException(502, "Failed to get user info from Microsoft")
-
-    email = userinfo.get("mail") or userinfo.get("userPrincipalName")
-    if not email:
-        raise HTTPException(502, "Microsoft account has no email address")
-
-    # Microsoft's 'id' field is the unique subject identifier
-    sub = userinfo.get("id", "")
-    if not sub:
-        raise HTTPException(502, "Microsoft account has no unique ID")
-
-    target = settings.base_url.rstrip("/") + "/"
-    redirect = RedirectResponse(target, status_code=303)
-
-    await _resolve_user_and_login(
-        db, redirect,
-        provider="microsoft",
-        sub=userinfo["id"],
-        email=email,
-        name=userinfo.get("displayName", ""),
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_expiry=utcnow() + timedelta(seconds=expires_in),
-    )
-
-    return redirect

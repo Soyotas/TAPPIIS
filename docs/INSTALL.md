@@ -840,7 +840,7 @@ Click **Start Campaign**. The queue engine reserves send slots across your inbox
 
 Quickly automatically classifies every reply into one of six categories: `interested`, `not_interested`, `out_of_office`, `wrong_person`, `auto_reply`, or `unsubscribed`.
 
-**Supported providers:** OpenAI, Anthropic Claude, Google Gemini, Mistral, Groq, Cohere, and 13+ others — including **Ollama** for fully local/offline classification.
+**Supported providers:** OpenAI and Anthropic Claude.
 
 **To configure:**
 

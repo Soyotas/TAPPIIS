@@ -54,7 +54,7 @@ Create multiple subject line or body variants per sequence step. Quickly randoml
 Spread sends across as many inboxes as you want — **Gmail, Microsoft, and generic SMTP accounts are all supported**, including personal Outlook.com addresses, business Microsoft 365 / Office 365 accounts, and relays like Amazon SES. Quickly's queue engine respects per-inbox daily limits, business-day schedules, configurable sending windows, and per-inbox cooldowns. New accounts? The **ramp-up warm-up** gradually increases daily send volume over a configurable period to protect deliverability. **Random jitter** adds a configurable random delay (up to N seconds) to each scheduled send time so your outreach doesn't fire in perfectly uniform bursts — configurable per inbox.
 
 ### AI-Powered Reply Classification
-Every reply is automatically classified by AI into one of six categories: `interested`, `not_interested`, `out_of_office`, `wrong_person`, `auto_reply`, or `unsubscribed`. Supports 19 AI providers including OpenAI, Anthropic Claude, Google Gemini, Mistral, Groq, and Ollama (for fully offline classification).
+Every reply is automatically classified by AI into one of six categories: `interested`, `not_interested`, `out_of_office`, `wrong_person`, `auto_reply`, or `unsubscribed`. Supports OpenAI and Anthropic Claude.
 
 ### Unified Inbox (Unibox)
 A built-in inbox sync layer gives you real-time reply detection, threaded conversation view, and compose/reply — all inside Quickly. Works across your Gmail and Microsoft accounts side-by-side. No tab-switching. No missed replies.
@@ -176,7 +176,7 @@ Quickly supports **Gmail** (via Google OAuth), **Microsoft accounts** — includ
 Instantly and Smartlead are hosted SaaS products that store your data on their servers and charge monthly fees per inbox or contact. Quickly runs entirely on your infrastructure — your leads never leave your server.
 
 **Does Quickly support AI reply classification?**
-Yes. Quickly integrates with 19 AI providers (OpenAI, Anthropic, Gemini, Groq, Mistral, Ollama, and more) to automatically classify replies into categories like `interested`, `not_interested`, and `out_of_office`.
+Yes. Quickly integrates with OpenAI and Anthropic to automatically classify replies into categories like `interested`, `not_interested`, and `out_of_office`.
 
 **Can I use Quickly with a team?**
 Yes. There are no seat limits. Deploy once, give your entire team access.

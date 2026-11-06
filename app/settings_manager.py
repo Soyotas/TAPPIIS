@@ -100,10 +100,6 @@ class Settings:
     def app_google_redirect_uri(self) -> str:
         return f"{self.base_url.rstrip('/')}/oauth/app/google/callback"
 
-    @property
-    def app_microsoft_redirect_uri(self) -> str:
-        return f"{self.base_url.rstrip('/')}/oauth/app/microsoft/callback"
-    
     def reload_from_dict(self, data: dict):
         """Update settings from a dictionary (typically loaded from DB)."""
         if "database_url" in data:
